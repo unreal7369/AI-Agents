@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EEG Clinical Analysis Agent</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fb;
+      color: #172033;
+    }
+
+    header {
+      background: #10233f;
+      color: white;
+      padding: 24px;
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+    }
+
+    header p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 28px auto 50px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .upload-area {
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s ease;
+      background: #f8fafc;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .upload-area strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+
+    .upload-area span {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .preview-wrapper {
+      margin-top: 18px;
+      display: none;
+      text-align: center;
+    }
+
+    #preview {
+      max-width: 100%;
+      max-height: 500px;
+      border-radius: 10px;
+      border: 1px solid #dbe3ee;
+      background: white;
+    }
+
+    .pdf-preview {
+      display: none;
+      padding: 18px;
+      border: 1px solid #dbe3ee;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .file-info {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    button {
+      border: none;
+      border-radius: 9px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #analyze {
+      margin-top: 18px;
+      background: #2563eb;
+      color: white;
+    }
+
+    #analyze:hover {
+      background: #1d4ed8;
+    }
+
+    #analyze:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .status {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #eff6ff;
+      color: #1e40af;
+      font-size: 14px;
+    }
+
+    .report-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .report-header h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    #meta {
+      display: none;
+    }
+
+    .formatted-report {
+      margin-top: 10px;
+      padding: 22px;
+      border: 1px solid #dbe3ee;
+      border-radius: 12px;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #263449;
+      overflow-x: auto;
+    }
+
+    .empty {
+      color: #64748b;
+      font-size: 14px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 30px;
+    }
+
+    .report-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      margin: 0 0 16px;
+      color: #172033;
+    }
+
+    .report-section {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      margin: 14px 0 6px;
+      color: #172033;
+    }
+
+    .report-label {
+      font-weight: 700;
+      margin: 8px 0 3px;
+      color: #263449;
+    }
+
+    .report-line {
+      line-height: 1.45;
+      margin: 0 0 6px;
+    }
+
+    .report-list {
+      margin: 4px 0 8px 20px;
+      padding: 0;
+    }
+
+    .report-list li {
+      line-height: 1.4;
+      margin: 0 0 4px;
+      padding-left: 2px;
+    }
+
+    @media (max-width: 700px) {
+      header {
+        padding: 20px 16px;
+      }
+
+      .container {
+        width: min(100% - 20px, 1200px);
+        margin-top: 18px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      header h1 {
+        font-size: 22px;
+      }
+
+      .formatted-report {
+        padding: 16px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>EEG Clinical Analysis Agent</h1>
+    <p>EEG waveform image and PDF analysis with clinical knowledge retrieval</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div
+        id="uploadArea"
+        class="upload-area"
+        role="button"
+        tabindex="0"
+      >
+        <strong>Upload EEG Image or PDF</strong>
+
+        <span>
+          Click here or drag and drop a PNG, JPG, JPEG, WEBP, or PDF EEG file
+        </span>
+
+        <input
+          id="fileInput"
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
+        />
+      </div>
+
+      <div
+        id="previewWrapper"
+        class="preview-wrapper"
+      >
+        <img
+          id="preview"
+          alt="Selected EEG image preview"
+        />
+
+        <div id="pdfPreview" class="pdf-preview">
+          PDF EEG document selected
+        </div>
+
+        <div
+          id="fileInfo"
+          class="file-info"
+        ></div>
+      </div>
+
+      <button
+        id="analyze"
+        disabled
+      >
+        Analyze EEG
+      </button>
+
+      <div
+        id="status"
+        class="status"
+      ></div>
+    </section>
+
+    <section
+      id="reportCard"
+      class="card"
+      style="display:none;"
+    >
+      <div class="report-header">
+        <h2>EEG Analysis Report</h2>
+        <div id="meta"></div>
+      </div>
+
+      <div
+        id="formattedReport"
+        class="formatted-report"
+      >
+        No report available.
+      </div>
+    </section>
+
+    <div class="footer-note">
+      Clinical decision support only. This system does not replace interpretation
+      of the complete EEG recording by a qualified clinician.
+    </div>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    let selected = null;
+    let currentPreviewUrl = null;
+
+    const MAX_FILE_SIZE = 30 * 1024 * 1024;
+
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+      "application/pdf"
+    ];
+
+    const allowedExtensions = [
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".webp",
+      ".pdf"
+    ];
+
+    function esc(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function renderMeta(data) {
+      $("meta").innerHTML = "";
+    }
+
+    function renderFormattedReport(data) {
+      let report =
+        data.formatted_report ||
+        data.report ||
+        "";
+
+      if (!report) {
+        $("formattedReport").innerHTML = `
+          <div class="empty">
+            No formatted clinical report was returned by the backend.
+          </div>
+        `;
+        return;
+      }
+
+      report = String(report)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .replace(/[ \t]*\n[ \t]*/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      const reportStart = report.search(/EEG REPORT/i);
+
+      if (reportStart !== -1) {
+        report = report.slice(reportStart).trim();
+      }
+
+      const safe = esc(report);
+      const lines = safe.split(/\n/);
+
+      let html = "";
+      let inList = false;
+
+      const closeList = () => {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+      };
+
+      const inline = value => {
+        return value.replace(
+          /\*\*(.+?)\*\*/g,
+          "<strong>$1</strong>"
+        );
+      };
+
+      for (const rawLine of lines) {
+        const line = rawLine
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\*\*/g, "")
+          .trim();
+
+        if (!line) {
+          closeList();
+          continue;
+        }
+
+        if (/^EEG CLINICAL ANALYSIS REPORT$/i.test(line)) {
+          closeList();
+          continue;
+        }
+
+        if (/^EEG REPORT$/i.test(line)) {
+          closeList();
+          html += `<div class="report-title">EEG REPORT</div>`;
+          continue;
+        }
+
+        if (/^PROCEDURE:?$/i.test(line)) {
+          closeList();
+          html += `<div class="report-section">Procedure</div>`;
+          continue;
+        }
+
+        if (/^FINDINGS:?$/i.test(line)) {
+          closeList();
+          html += `<div class="report-section">Findings</div>`;
+          continue;
+        }
+
+        if (/^IMPRESSION:?$/i.test(line)) {
+          closeList();
+          html += `<div class="report-section">Impression</div>`;
+          continue;
+        }
+
+        if (/^[•*-]\s+/.test(line)) {
+          if (!inList) {
+            html += '<ul class="report-list">';
+            inList = true;
+          }
+
+          const item = line.replace(/^[•*-]\s+/, "");
+
+          html += `<li>${inline(item)}</li>`;
+          continue;
+        }
+
+        if (/^[A-Za-z][A-Za-z0-9 /()_-]{1,60}:$/.test(line)) {
+          closeList();
+          html += `
+            <div class="report-label">
+              ${inline(line.slice(0, -1))}
+            </div>
+          `;
+          continue;
+        }
+
+        closeList();
+
+        html += `
+          <div class="report-line">
+            ${inline(line)}
+          </div>
+        `;
+      }
+
+      closeList();
+
+      $("formattedReport").innerHTML = html;
+    }
+
+    function validateFile(file) {
+      if (!file) {
+        return "No file selected.";
+      }
+
+      const fileName =
+        String(file.name || "").toLowerCase();
+
+      const validType =
+        allowedTypes.includes(file.type);
+
+      const validExtension =
+        allowedExtensions.some(
+          ext => fileName.endsWith(ext)
+        );
+
+      if (!validType && !validExtension) {
+        return "Unsupported file format. Please upload PNG, JPG, JPEG, WEBP, or PDF.";
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        return "File is larger than the 30 MB limit.";
+      }
+
+      return null;
+    }
+
+    function showSelectedFile(file) {
+      const error = validateFile(file);
+
+      if (error) {
+        selected = null;
+
+        $("previewWrapper").style.display = "none";
+        $("preview").style.display = "none";
+        $("pdfPreview").style.display = "none";
+
+        $("analyze").disabled = true;
+
+        $("status").style.display = "block";
+        $("status").textContent = error;
+
+        return;
+      }
+
+      selected = file;
+
+      if (currentPreviewUrl) {
+        URL.revokeObjectURL(currentPreviewUrl);
+        currentPreviewUrl = null;
+      }
+
+      const fileName =
+        String(file.name || "").toLowerCase();
+
+      const isPdf =
+        file.type === "application/pdf" ||
+        fileName.endsWith(".pdf");
+
+      if (isPdf) {
+        $("preview").style.display = "none";
+        $("preview").removeAttribute("src");
+
+        $("pdfPreview").style.display = "block";
+        $("previewWrapper").style.display = "block";
+
+        $("fileInfo").textContent =
+          `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB • PDF`;
+      } else {
+        currentPreviewUrl =
+          URL.createObjectURL(file);
+
+        $("pdfPreview").style.display = "none";
+
+        $("preview").style.display = "inline-block";
+        $("preview").src = currentPreviewUrl;
+
+        $("previewWrapper").style.display = "block";
+
+        $("fileInfo").textContent =
+          `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+      }
+
+      $("analyze").disabled = false;
+      $("status").style.display = "none";
+      $("reportCard").style.display = "none";
+    }
+
+    $("uploadArea").addEventListener(
+      "click",
+      () => {
+        $("fileInput").click();
+      }
+    );
+
+    $("uploadArea").addEventListener(
+      "keydown",
+      event => {
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+          event.preventDefault();
+          $("fileInput").click();
+        }
+      }
+    );
+
+    $("fileInput").addEventListener(
+      "change",
+      event => {
+        const file =
+          event.target.files?.[0];
+
+        showSelectedFile(file);
+      }
+    );
+
+    $("uploadArea").addEventListener(
+      "dragover",
+      event => {
+        event.preventDefault();
+
+        $("uploadArea")
+          .classList
+          .add("dragover");
+      }
+    );
+
+    $("uploadArea").addEventListener(
+      "dragleave",
+      () => {
+        $("uploadArea")
+          .classList
+          .remove("dragover");
+      }
+    );
+
+    $("uploadArea").addEventListener(
+      "drop",
+      event => {
+        event.preventDefault();
+
+        $("uploadArea")
+          .classList
+          .remove("dragover");
+
+        const file =
+          event.dataTransfer.files?.[0];
+
+        showSelectedFile(file);
+      }
+    );
+
+    $("analyze").onclick =
+      async () => {
+
+        if (!selected) {
+          return;
+        }
+
+        $("analyze").disabled = true;
+
+        $("status").style.display = "block";
+        $("status").textContent =
+          "Analyzing EEG file...";
+
+        $("reportCard").style.display =
+          "none";
+
+        try {
+          const formData =
+            new FormData();
+
+          formData.append(
+            "file",
+            selected
+          );
+
+          const response =
+            await fetch(
+              "/api/analyze",
+              {
+                method: "POST",
+                body: formData
+              }
+            );
+
+          let data;
+
+          try {
+            data =
+              await response.json();
+          } catch (jsonError) {
+            throw new Error(
+              `Server returned an invalid response (${response.status}).`
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data?.detail ||
+              data?.error ||
+              `Analysis failed with HTTP ${response.status}.`
+            );
+          }
+
+          console.log(
+            "EEG backend response:",
+            data
+          );
+
+          renderMeta(data);
+          renderFormattedReport(data);
+
+          $("status").textContent =
+            "Analysis complete";
+
+          $("status").style.display =
+            "block";
+
+          $("reportCard").style.display =
+            "block";
+
+        } catch (error) {
+          console.error(
+            "EEG analysis error:",
+            error
+          );
+
+          $("status").style.display =
+            "block";
+
+          $("status").textContent =
+            `Analysis failed • ${
+              error.message ||
+              "Unknown error"
+            }`;
+
+        } finally {
+          $("analyze").disabled =
+            !selected;
+        }
+      };
+  </script>
+</body>
+</html>

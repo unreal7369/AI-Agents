@@ -1,0 +1,16 @@
+﻿.env
+.env.*
+!.env.example
+**/secrets.toml
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+eeg_dataset/
+consultation_recordings/
+*.wav
+*.mp3
+*.edf
+*.bdf
+*.fif
