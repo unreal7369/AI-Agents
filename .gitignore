@@ -1,16 +1,29 @@
-﻿.env
+﻿# API keys and credentials
+.env
 .env.*
 !.env.example
 **/secrets.toml
+
+# Python virtual environments
 .venv/
 venv/
+env/
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Frontend dependencies
 node_modules/
+
+# Medical datasets and recordings
 eeg_dataset/
 consultation_recordings/
 *.wav
 *.mp3
+*.m4a
 *.edf
 *.bdf
 *.fif
+
+# Local generated files
+.streamlit/secrets.toml
